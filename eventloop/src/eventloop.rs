@@ -41,8 +41,8 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
         T: 'static,
     {
         // Create the caller
-        let callback_box = CopyBox::new(callback).expect("function pointer is greater than 8 bytes");
-        let caller: fn(Box<STACKBOX_SIZE>, CopyBox<8>) = Self::caller::<T>;
+        let callback_box = CopyBox::new(callback).expect("cannot box function pointer");
+        let caller: fn(Box<STACKBOX_SIZE>, CopyBox<FPTR_SIZE>) = Self::caller::<T>;
         let listener = (TypeId::of::<T>(), callback_box, caller);
 
         // Insert the listener
@@ -93,7 +93,7 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
     }
 
     /// Calls a callback with an event
-    fn caller<T>(event: Box<STACKBOX_SIZE>, callback: CopyBox<8>)
+    fn caller<T>(event: Box<STACKBOX_SIZE>, callback: CopyBox<FPTR_SIZE>)
     where
         T: 'static,
     {
