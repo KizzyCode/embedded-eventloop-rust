@@ -1,0 +1,2 @@
+[workspace]
+members = ["eventloop", "eventloop-rp2040"]
