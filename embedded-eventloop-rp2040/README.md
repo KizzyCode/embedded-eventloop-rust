@@ -4,3 +4,5 @@
 
 # `eventloop`
 An eventloop for embedded devices, with predefined runtime functions for the rp2040.
+
+⚠️ WARNING: WIP ⚠️
