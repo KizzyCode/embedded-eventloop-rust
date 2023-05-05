@@ -5,5 +5,5 @@
 pub mod runtime;
 
 // Re-export everything
-extern crate eventloop;
-pub use eventloop::*;
+extern crate embedded_eventloop;
+pub use embedded_eventloop::*;

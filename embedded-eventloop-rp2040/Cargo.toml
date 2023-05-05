@@ -20,7 +20,7 @@ default = []
 
 [dependencies]
 # FIXME
-eventloop = { git = "https://github.com/KizzyCode/embedded-eventloop-rust.git" }
+embedded-eventloop = { git = "https://github.com/KizzyCode/embedded-eventloop-rust.git" }
 critical-section = "1.1.1"
 cortex-m = "0.7.7"
 
