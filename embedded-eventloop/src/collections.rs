@@ -1,20 +1,22 @@
 //! A stack-allocated ring buffer implementation
 
-use core::{
-    mem::MaybeUninit,
-    ops::{Deref, DerefMut},
-    slice,
-};
+use core::{mem::MaybeUninit, ops::Deref, slice};
 
-/// A push-only stack-allocated stack
-#[derive(Debug)]
-pub struct Stack<T, const SIZE: usize> {
+/// A push-only stack-allocated stack for `Copy`-types
+#[derive(Debug, Clone, Copy)]
+pub struct Stack<T, const SIZE: usize>
+where
+    T: Copy,
+{
     /// The underlying elements
     elements: [MaybeUninit<T>; SIZE],
     /// The amount of elements
     len: usize,
 }
-impl<T, const SIZE: usize> Stack<T, SIZE> {
+impl<T, const SIZE: usize> Stack<T, SIZE>
+where
+    T: Copy,
+{
     /// The default value for non-copy const-time initialization
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
 
@@ -36,15 +38,10 @@ impl<T, const SIZE: usize> Stack<T, SIZE> {
         Ok(())
     }
 }
-impl<T, const SIZE: usize> Drop for Stack<T, SIZE> {
-    fn drop(&mut self) {
-        // Drop the initialized elements
-        for element in self.elements.iter_mut().take(self.len) {
-            unsafe { element.assume_init_drop() };
-        }
-    }
-}
-impl<T, const SIZE: usize> Deref for Stack<T, SIZE> {
+impl<T, const SIZE: usize> Deref for Stack<T, SIZE>
+where
+    T: Copy,
+{
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -52,14 +49,6 @@ impl<T, const SIZE: usize> Deref for Stack<T, SIZE> {
         // ABI as T" (https://doc.rust-lang.org/core/mem/union.MaybeUninit.html#layout-1)
         let ptr = self.elements.as_ptr() as *const T;
         unsafe { slice::from_raw_parts(ptr, self.len) }
-    }
-}
-impl<T, const SIZE: usize> DerefMut for Stack<T, SIZE> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        // This feels dirty, but should be sound since "MaybeUninit<T> is guaranteed to have the same size, alignment, and
-        // ABI as T" (https://doc.rust-lang.org/core/mem/union.MaybeUninit.html#layout-1)
-        let ptr = self.elements.as_mut_ptr() as *mut T;
-        unsafe { slice::from_raw_parts_mut(ptr, self.len) }
     }
 }
 

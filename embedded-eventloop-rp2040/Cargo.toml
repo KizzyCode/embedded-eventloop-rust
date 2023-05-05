@@ -1,5 +1,5 @@
 [package]
-name = "eventloop-rp2040"
+name = "embedded-eventloop-rp2040"
 version = "0.1.0"
 edition = "2021"
 authors = ["KizzyCode Software Labs./Keziah Biermann <development@kizzycode.de>"]
@@ -7,7 +7,7 @@ keywords = []
 categories = []
 description = "An eventloop for embedded devices, with predefined runtime functions for the rp2040"
 license = "BSD-2-Clause OR MIT"
-repository = "https://github.com/KizzyCode/eventloop-rust"
+repository = "https://github.com/KizzyCode/embedded-eventloop-rust"
 readme = "README.md"
 
 
@@ -19,7 +19,8 @@ default = []
 
 
 [dependencies]
-eventloop = { git = "https://github.com/KizzyCode/eventloop-rust.git" }
+# FIXME
+eventloop = { git = "https://github.com/KizzyCode/embedded-eventloop-rust.git" }
 critical-section = "1.1.1"
 cortex-m = "0.7.7"
 

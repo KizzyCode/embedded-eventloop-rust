@@ -1,2 +1,2 @@
 [workspace]
-members = ["eventloop", "eventloop-rp2040"]
+members = ["embedded-eventloop", "embedded-eventloop-rp2040"]

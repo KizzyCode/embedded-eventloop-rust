@@ -1,4 +1,4 @@
-//! Implements an threadsafe wrapper
+//! A threadsafe cell type
 
 use crate::runtime;
 use core::{
@@ -7,6 +7,7 @@ use core::{
 };
 
 /// A threadsafe cell
+#[repr(transparent)]
 pub struct ThreadSafeCell<T> {
     /// The wrapped value
     inner: UnsafeCell<T>,
@@ -26,8 +27,8 @@ impl<T> ThreadSafeCell<T> {
         let mut scope = Some(scope);
         let mut result: Option<FR> = None;
 
-        // Create the implementation
-        let mut impl_ = || {
+        // Create the caller
+        let mut call_scope = || {
             // Get the value
             let value_ptr = self.inner.get();
             let value = unsafe { value_ptr.as_mut() }.expect("unexpected NULL pointer inside cell");
@@ -38,7 +39,7 @@ impl<T> ThreadSafeCell<T> {
         };
 
         // Run the implementation in a threadsafe context and return the result
-        unsafe { runtime::_eventloop_0_1_threadsafe(&mut impl_) };
+        unsafe { runtime::_runtime_threadsafe_NfpNM21J(&mut call_scope) };
         result.expect("implementation scope did not set result value")
     }
 }

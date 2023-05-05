@@ -4,5 +4,8 @@
 pub mod boxes;
 pub mod collections;
 pub mod eventloop;
-pub mod runtime;
+mod runtime;
 pub mod threadsafe;
+
+// Re-export the event loop
+pub use eventloop::*;

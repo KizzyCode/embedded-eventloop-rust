@@ -1,4 +1,4 @@
-//! A stack-allocated type-opaque box
+//! Stack-allocated type-opaque boxes
 
 use core::{
     any::TypeId,
@@ -140,6 +140,7 @@ where
     T: 'static,
 {
     // Validate constraints
+    assert!(mem::size_of::<T>() <= SIZE, "type is too large for stackbox");
     assert_eq!(type_id, TypeId::of::<T>(), "type mismatch");
 
     // Recover the value

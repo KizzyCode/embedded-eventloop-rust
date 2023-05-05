@@ -1,4 +1,4 @@
-//! Implements an event loop
+//! An event loop
 
 use crate::{
     boxes::{Box, CopyBox},
@@ -64,7 +64,7 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
         };
 
         // Trigger a hardware event
-        unsafe { runtime::_eventloop_0_1_send_event() };
+        unsafe { runtime::_runtime_sendevent_ZMWrWpGO() };
         Ok(())
     }
 
@@ -72,7 +72,7 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
     pub fn enter(&self) -> ! {
         'event_loop: loop {
             // Wait for event
-            unsafe { runtime::_eventloop_0_1_wait_for_event() };
+            unsafe { runtime::_runtime_waitforevent_r3iRR3iR() };
 
             // Grab the next event
             let Some(event_box) = self.events.scope(|events| events.pop()) else {

@@ -1,5 +1,5 @@
 [package]
-name = "eventloop"
+name = "embedded-eventloop"
 version = "0.1.0"
 edition = "2021"
 authors = ["KizzyCode Software Labs./Keziah Biermann <development@kizzycode.de>"]
@@ -7,7 +7,7 @@ keywords = []
 categories = []
 description = "An eventloop for embedded devices"
 license = "BSD-2-Clause OR MIT"
-repository = "https://github.com/KizzyCode/eventloop-rust"
+repository = "https://github.com/KizzyCode/embedded-eventloop-rust"
 readme = "README.md"
 
 
