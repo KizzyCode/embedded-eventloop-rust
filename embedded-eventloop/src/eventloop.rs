@@ -51,7 +51,25 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
         }
         Ok(())
     }
+    /// Adds a listener to the event loop which receives all events of type `T`, and sends `event` to ensure that the
+    /// listener is at least called once
+    ///
+    /// This method is especially useful to bootstrap periodical event sources (e.g. timers).
+    ///
+    /// # Warning
+    /// While it is possible to add multiple listeners for the same type `T`, only the first added listener will be called
+    pub fn bootstrap<T>(&self, event: T, callback: fn(T)) -> Result<(), T>
+    where
+        T: 'static,
+    {
+        // Register the listener
+        if self.listen(callback).is_err() {
+            return Err(event);
+        };
 
+        // Send the seed event
+        self.send(event)
+    }
     /// Sends an event to the event loop, returns `Err(event)` if the backlog is reached
     pub fn send<T>(&self, event: T) -> Result<(), T>
     where
