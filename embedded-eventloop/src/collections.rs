@@ -1,6 +1,6 @@
 //! A stack-allocated ring buffer implementation
 
-use core::{mem::MaybeUninit, ops::Deref, slice};
+use core::{array::IntoIter, iter::Flatten};
 
 /// A push-only stack-allocated stack for `Copy`-types
 #[derive(Debug, Clone, Copy)]
@@ -9,7 +9,7 @@ where
     T: Copy,
 {
     /// The underlying elements
-    elements: [MaybeUninit<T>; SIZE],
+    elements: [Option<T>; SIZE],
     /// The amount of elements
     len: usize,
 }
@@ -18,7 +18,7 @@ where
     T: Copy,
 {
     /// The default value for non-copy const-time initialization
-    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+    const INIT: Option<T> = None;
 
     /// Creates a new stack
     pub const fn new() -> Self {
@@ -33,22 +33,20 @@ where
         }
 
         // Insert the value
-        self.elements[self.len].write(value);
+        self.elements[self.len] = Some(value);
         self.len += 1;
         Ok(())
     }
 }
-impl<T, const SIZE: usize> Deref for Stack<T, SIZE>
+impl<T, const SIZE: usize> IntoIterator for Stack<T, SIZE>
 where
     T: Copy,
 {
-    type Target = [T];
+    type Item = T;
+    type IntoIter = Flatten<IntoIter<Option<T>, SIZE>>;
 
-    fn deref(&self) -> &Self::Target {
-        // This feels dirty, but should be sound since "MaybeUninit<T> is guaranteed to have the same size, alignment, and
-        // ABI as T" (https://doc.rust-lang.org/core/mem/union.MaybeUninit.html#layout-1)
-        let ptr = self.elements.as_ptr() as *const T;
-        unsafe { slice::from_raw_parts(ptr, self.len) }
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter().flatten()
     }
 }
 

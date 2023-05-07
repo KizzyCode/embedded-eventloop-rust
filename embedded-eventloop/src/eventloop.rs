@@ -11,8 +11,16 @@ use core::{any::TypeId, mem};
 /// The size of a function pointer
 const FPTR_SIZE: usize = mem::size_of::<fn()>();
 
-/// An event listener with the associated type and caller
-type EventListener<const SIZE: usize> = (TypeId, CopyBox<FPTR_SIZE>, fn(Box<SIZE>, CopyBox<FPTR_SIZE>));
+/// An event listener with the associated type and a type-specific caller implementation
+#[derive(Debug, Clone, Copy)]
+struct EventListener<const SIZE: usize> {
+    /// The type ID
+    pub type_id: TypeId,
+    /// The boxed callback
+    pub callback_box: CopyBox<FPTR_SIZE>,
+    /// A type specific caller to invoke the callback
+    pub caller: fn(Box<SIZE>, CopyBox<FPTR_SIZE>) -> Option<Box<SIZE>>,
+}
 
 /// An event loop
 #[derive(Debug)]
@@ -34,16 +42,18 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
 
     /// Adds a listener to the event loop which receives all events of type `T`
     ///
-    /// # Warning
-    /// While it is possible to add multiple listeners for the same type `T`, only the first added listener will be called
-    pub fn listen<T>(&self, callback: fn(T)) -> Result<(), fn(T)>
+    /// # Note on multiple listeners
+    /// It is possible to chain multiple listeners for the same event type `T`. If the first invoked listener returns
+    /// `Some(event)` again, the next listener is invoked with `event`, and so on. If at some point a listener returns
+    /// `None`, the chain ends and subsequent listeners are not invoked anymore.
+    pub fn listen<T>(&self, callback: fn(T) -> Option<T>) -> Result<(), fn(T) -> Option<T>>
     where
         T: 'static,
     {
         // Create the caller
         let callback_box = CopyBox::new(callback).expect("cannot box function pointer");
-        let caller: fn(Box<STACKBOX_SIZE>, CopyBox<FPTR_SIZE>) = Self::caller::<T>;
-        let listener = (TypeId::of::<T>(), callback_box, caller);
+        let caller: fn(Box<STACKBOX_SIZE>, CopyBox<FPTR_SIZE>) -> Option<Box<STACKBOX_SIZE>> = Self::caller::<T>;
+        let listener = EventListener { type_id: TypeId::of::<T>(), callback_box, caller };
 
         // Insert the listener
         if self.listeners.scope(|listeners| listeners.push(listener)).is_err() {
@@ -56,9 +66,11 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
     ///
     /// This method is especially useful to bootstrap periodical event sources (e.g. timers).
     ///
-    /// # Warning
-    /// While it is possible to add multiple listeners for the same type `T`, only the first added listener will be called
-    pub fn bootstrap<T>(&self, event: T, callback: fn(T)) -> Result<(), T>
+    /// # Note on multiple listeners
+    /// It is possible to chain multiple listeners for the same event type `T`. If the first invoked listener returns
+    /// `Some(event)` again, the next listener is invoked with `event`, and so on. If at some point a listener returns
+    /// `None`, the chain ends and subsequent listeners are not invoked anymore.
+    pub fn bootstrap<T>(&self, event: T, callback: fn(T) -> Option<T>) -> Result<(), T>
     where
         T: 'static,
     {
@@ -88,36 +100,38 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
 
     /// Enters the event loop
     pub fn enter(&self) -> ! {
-        'event_loop: loop {
+        loop {
             // Wait for event
             unsafe { runtime::_runtime_waitforevent_r3iRR3iR() };
 
-            // Grab the next event
-            let Some(event_box) = self.events.scope(|events| events.pop()) else {
-                continue 'event_loop;
-            };
+            // Grab next event and listeners
+            let mut maybe_event_box = self.events.scope(|events| events.pop());
+            let mut listeners = self.listeners.scope(|listeners| listeners.into_iter());
 
-            // Find a matching event handler
-            let maybe_listener_caller = self.listeners.scope(|listeners| {
-                // Find the first listener which type ID matches the event's type ID
-                listeners.iter().find(|(type_id, _, _)| *type_id == event_box.inner_type_id()).copied()
-            });
-
-            // Call the listener
-            if let Some((_, callback_box, caller)) = maybe_listener_caller {
-                caller(event_box, callback_box);
+            // Invoke the matching listeners
+            while let (Some(event_box), Some(listener)) = (maybe_event_box.take(), listeners.next()) {
+                // Check if the event type matches the callback's type
+                let EventListener { type_id, callback_box, caller } = listener;
+                if type_id == event_box.inner_type_id() {
+                    // Call the callback and store the returned event box
+                    maybe_event_box = caller(event_box, callback_box);
+                }
             }
         }
     }
 
     /// Calls a callback with an event
-    fn caller<T>(event: Box<STACKBOX_SIZE>, callback: CopyBox<FPTR_SIZE>)
+    fn caller<T>(boxed_event: Box<STACKBOX_SIZE>, callback: CopyBox<FPTR_SIZE>) -> Option<Box<STACKBOX_SIZE>>
     where
         T: 'static,
     {
-        // Recover the original types and call the callback
-        let event: T = event.into_inner().expect("failed to unwrap event");
-        let callback: fn(T) = callback.inner().expect("failed to unwrap callback");
-        callback(event);
+        // Recover the original types
+        let event: T = boxed_event.into_inner().expect("failed to unwrap event");
+        let callback: fn(T) -> Option<T> = callback.inner().expect("failed to unwrap callback");
+
+        // Call the callback and box the result
+        let event = callback(event)?;
+        let boxed_event = Box::new(event).unwrap_or_else(|_| unreachable!("failed to re-box event"));
+        Some(boxed_event)
     }
 }
