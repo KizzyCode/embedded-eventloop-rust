@@ -46,7 +46,7 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
     /// It is possible to chain multiple listeners for the same event type `T`. If the first invoked listener returns
     /// `Some(event)` again, the next listener is invoked with `event`, and so on. If at some point a listener returns
     /// `None`, the chain ends and subsequent listeners are not invoked anymore.
-    pub fn listen<T>(&self, callback: fn(T) -> Option<T>) -> Result<(), fn(T) -> Option<T>>
+    pub fn register<T>(&self, callback: fn(T) -> Option<T>) -> Result<(), fn(T) -> Option<T>>
     where
         T: 'static,
     {
@@ -75,7 +75,7 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
         T: 'static,
     {
         // Register the listener
-        if self.listen(callback).is_err() {
+        if self.register(callback).is_err() {
             return Err(event);
         };
 
