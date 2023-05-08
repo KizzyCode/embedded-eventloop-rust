@@ -100,15 +100,18 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
 
     /// Enters the event loop
     pub fn enter(&self) -> ! {
-        loop {
+        'event_loop: loop {
             // Wait for event
-            unsafe { runtime::_runtime_waitforevent_r3iRR3iR() };
-
-            // Grab next event and listeners
             let mut maybe_event_box = self.events.scope(|events| events.pop());
-            let mut listeners = self.listeners.scope(|listeners| listeners.into_iter());
+            if maybe_event_box.is_none() {
+                // Wait for a hardware event and continue
+                unsafe { runtime::_runtime_waitforevent_r3iRR3iR() };
+                continue 'event_loop;
+            }
 
-            // Invoke the matching listeners
+            // Invoke matching event listeners
+            let mut listeners = self.listeners.scope(|listeners| listeners.into_iter());
+            // Iterate as long as we have a) an event to process and b) an event listener to test against
             while let (Some(event_box), Some(listener)) = (maybe_event_box.take(), listeners.next()) {
                 // Check if the event type matches the callback's type
                 let EventListener { type_id, callback_box, caller } = listener;
