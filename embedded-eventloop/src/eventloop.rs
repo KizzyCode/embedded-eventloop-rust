@@ -122,6 +122,9 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
                 if type_id == event_box.inner_type_id() {
                     // Call the callback and store the returned event box
                     maybe_event_box = caller(event_box, callback_box);
+                } else {
+                    // This callback cannot process the box; re-insert it for the next potential match
+                    maybe_event_box = Some(event_box);
                 }
             }
         }
