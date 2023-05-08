@@ -110,9 +110,13 @@ impl<const STACKBOX_SIZE: usize, const BACKLOG_MAX: usize, const LISTENERS_MAX: 
             }
 
             // Invoke matching event listeners
-            let mut listeners = self.listeners.scope(|listeners| listeners.into_iter());
-            // Iterate as long as we have a) an event to process and b) an event listener to test against
-            while let (Some(event_box), Some(listener)) = (maybe_event_box.take(), listeners.next()) {
+            let listeners = self.listeners.scope(|listeners| *listeners);
+            for listener in listeners {
+                // Grab event box
+                let Some(event_box) = maybe_event_box.take() else {
+                    continue 'event_loop;
+                };
+
                 // Check if the event type matches the callback's type
                 let EventListener { type_id, callback_box, caller } = listener;
                 if type_id == event_box.inner_type_id() {
